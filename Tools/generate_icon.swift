@@ -1,7 +1,7 @@
 #!/usr/bin/env swift
 // Generates the app icon in the same periodic-table style as M3 Tracker: atomic number
 // "28", tipped 45° to the left, the "Dl" symbol, and the name along the bottom, on
-// DiskLens's violet.
+// a white tile.
 // Run with:
 //   swift Tools/generate_icon.swift
 //
@@ -31,7 +31,7 @@ let cornerRadius = side * 0.215
 
 let tilePath = CGPath(roundedRect: tile, cornerWidth: cornerRadius, cornerHeight: cornerRadius, transform: nil)
 
-// MARK: - Teal body
+// MARK: - White body
 
 ctx.saveGState()
 ctx.addPath(tilePath)
@@ -39,8 +39,8 @@ ctx.clip()
 
 let colorSpace = CGColorSpaceCreateDeviceRGB()
 let bodyColors = [
-    NSColor(srgbRed: 0.62, green: 0.45, blue: 0.92, alpha: 1.0).cgColor,
-    NSColor(srgbRed: 0.33, green: 0.18, blue: 0.62, alpha: 1.0).cgColor,
+    NSColor(white: 1.0, alpha: 1.0).cgColor,
+    NSColor(white: 0.90, alpha: 1.0).cgColor,
 ] as CFArray
 let bodyGradient = CGGradient(colorsSpace: colorSpace, colors: bodyColors, locations: [0.0, 1.0])!
 ctx.drawLinearGradient(
@@ -65,6 +65,12 @@ ctx.setFillColor(NSColor.white.withAlphaComponent(0.10).cgColor)
 ctx.fillPath()
 
 ctx.restoreGState()
+
+// A hairline edge, so the white tile doesn't vanish against light backgrounds.
+ctx.addPath(tilePath)
+ctx.setStrokeColor(NSColor(white: 0.0, alpha: 0.12).cgColor)
+ctx.setLineWidth(canvas * 0.004)
+ctx.strokePath()
 
 // MARK: - Text
 
