@@ -18,6 +18,9 @@ struct DiskLensApp: App {
         }
         .defaultSize(width: 1280, height: 820)
         .commands {
+            CommandGroup(after: .appInfo) {
+                Button("Check for Updates…") { UpdateController.checkForUpdates() }
+            }
             CommandGroup(replacing: .appSettings) {
                 Button("Settings…") { SettingsWindow.shared.show() }
                     .keyboardShortcut(",", modifiers: .command)
@@ -100,6 +103,9 @@ struct MenuBarPanel: View {
 final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         if !AppPresence.showInDock { AppPresence.applyDock() }
+        if UserDefaults.standard.object(forKey: "checkForUpdatesAutomatically") as? Bool ?? true {
+            UpdateController.checkForUpdates(silent: true)
+        }
     }
 
     func applicationDockMenu(_ sender: NSApplication) -> NSMenu? {

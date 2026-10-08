@@ -71,7 +71,10 @@ struct TreemapView: View {
                 Canvas { context, _ in drawHighlights(in: &context) }.allowsHitTesting(false)
             }
             .task(id: key) {
-                let tree = tree, focus = key.focus
+                // Read the tree from the model when the task runs: a captured copy can be
+                // the one from before a trash or rescan.
+                guard let tree = model.tree else { return }
+                let focus = key.focus
                 let bounds = CGRect(origin: .zero, size: key.size)
                 // Let a window resize settle before relaying out.
                 if cellsKey != nil { try? await Task.sleep(for: .milliseconds(40)) }
@@ -100,9 +103,17 @@ struct TreemapView: View {
             .contextMenu {
                 if let id = model.hovered { ItemMenu(model: model, id: id) }
             }
-            .accessibilityElement()
-            .accessibilityLabel("Treemap of \(tree.name(model.focus))")
-            .accessibilityAddTraits(.allowsDirectInteraction)
+            .accessibilityElement(children: .contain)
+            .accessibilityLabel("Treemap of \(model.displayName(model.focus))")
+            .accessibilityChildren {
+                // The focused folder's largest items, so the chart can be explored without a pointer.
+                ForEach(tree.visibleChildren(model.focus).prefix(40), id: \.self) { id in
+                    Text("\(tree.name(id)), \(Format.bytes(tree.size(id))), \(tree.safety(id).title)")
+                        .accessibilityAddTraits(.isButton)
+                        .accessibilityAction { model.selection = id }
+                        .accessibilityAction(named: "Zoom In") { model.zoom(into: id) }
+                }
+            }
         }
     }
 
@@ -121,7 +132,7 @@ struct TreemapView: View {
                 context.fill(Path(rect), with: .color(Palette.containerFill.opacity(0.55 + 0.08 * Double(min(cell.depth, 5)))))
                 if rect.height > 40 && rect.width > 60 {
                     let header = CGRect(x: rect.minX, y: rect.minY, width: rect.width, height: TreemapLayout.headerHeight)
-                    let name = cell.id == FileTree.root ? model.currentTarget.title : tree.name(cell.id)
+                    let name = model.displayName(cell.id)
                     let label = "\(name)  \(Format.bytes(tree.size(cell.id)))"
                     context.draw(Text(label).font(.system(size: 10, weight: .semibold)).foregroundStyle(Palette.headerText),
                                  in: header.insetBy(dx: 4, dy: 1))
@@ -183,14 +194,15 @@ struct SunburstView: View {
                 }
                 .allowsHitTesting(false)
                 VStack(spacing: 2) {
-                    Text(tree.name(model.focus)).font(.headline).lineLimit(1)
+                    Text(model.displayName(model.focus)).font(.headline).lineLimit(1)
                     Text(Format.bytes(tree.size(model.focus))).font(.subheadline).foregroundStyle(.secondary)
                 }
                 .frame(width: ringWidth * 1.7)
                 .allowsHitTesting(false)
             }
             .task(id: key) {
-                let tree = tree, focus = key.focus, depth = maxDepth
+                guard let tree = model.tree else { return }
+                let focus = key.focus, depth = maxDepth
                 let (laidOut, folderTints) = await Task.detached(priority: .userInitiated) {
                     let cells = SunburstLayout.cells(tree: tree, root: focus, maxDepth: depth)
                     var tints: [NodeID: FileCategory] = [:]
@@ -222,7 +234,7 @@ struct SunburstView: View {
                 if let id = model.hovered { ItemMenu(model: model, id: id) }
             }
             .accessibilityElement()
-            .accessibilityLabel("Sunburst chart of \(tree.name(model.focus))")
+            .accessibilityLabel("Sunburst chart of \(model.displayName(model.focus))")
         }
     }
 

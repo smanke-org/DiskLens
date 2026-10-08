@@ -103,7 +103,9 @@ struct ContentView: View {
             }
             Picker("View", selection: $model.style) {
                 ForEach(VisualizationStyle.allCases) { style in
-                    Label(style.title, systemImage: style.symbol).tag(style)
+                    Label(style.title, systemImage: style.symbol)
+                        .accessibilityLabel(style.title)
+                        .tag(style)
                 }
             }
             .pickerStyle(.segmented)
@@ -125,21 +127,28 @@ struct ContentView: View {
 
 struct SidebarView: View {
     @Bindable var model: AppModel
+    @State private var updates = UpdateAvailability.shared
 
     var body: some View {
         List(selection: Binding<Lens?>(get: { model.lens }, set: { if let lens = $0 { model.lens = lens } })) {
             Section("Locations") {
                 ForEach(model.targets) { target in
-                    HStack {
-                        Label(target.title, systemImage: target.symbol)
-                            .fontWeight(target.id == model.selectedTarget ? .semibold : .regular)
-                        Spacer()
-                        if target.id == model.selectedTarget {
-                            Image(systemName: "checkmark").foregroundStyle(Color.accentColor)
+                    Button {
+                        model.select(target.id)
+                    } label: {
+                        HStack {
+                            Label(target.title, systemImage: target.symbol)
+                                .fontWeight(target.id == model.selectedTarget ? .semibold : .regular)
+                            Spacer()
+                            if target.id == model.selectedTarget {
+                                Image(systemName: "checkmark").foregroundStyle(Color.accentColor)
+                            }
                         }
+                        .contentShape(Rectangle())
                     }
-                    .contentShape(Rectangle())
-                    .onTapGesture { model.select(target.id) }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Scan \(target.title)")
+                    .accessibilityAddTraits(target.id == model.selectedTarget ? .isSelected : [])
                     .contextMenu {
                         Button("Show in Finder") {
                             NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: target.path)])
@@ -163,8 +172,16 @@ struct SidebarView: View {
             }
         }
         .safeAreaInset(edge: .bottom) {
-            VolumeSummary(path: model.currentTarget.path, version: model.treeVersion)
-                .padding(12)
+            VStack(alignment: .leading, spacing: 10) {
+                if let version = updates.pending {
+                    Button("Update to \(version)…", systemImage: "arrow.down.circle") {
+                        UpdateController.checkForUpdates()
+                    }
+                    .buttonStyle(.borderless)
+                }
+                VolumeSummary(path: model.currentTarget.path, version: model.treeVersion)
+            }
+            .padding(12)
         }
     }
 
@@ -220,9 +237,19 @@ struct FilterBar: View {
         HStack(spacing: 10) {
             Label(model.lens.title, systemImage: model.lens.symbol).font(.headline)
             if model.lens != .suggestions && model.lens != .duplicates {
-                Text("in \(model.tree.map { $0.name(model.focus) } ?? "")").foregroundStyle(.secondary).lineLimit(1)
+                Text("in \(model.displayName(model.focus))").foregroundStyle(.secondary).lineLimit(1)
             }
             Spacer()
+            if model.lens != .suggestions && model.lens != .duplicates {
+                filters
+            }
+        }
+        .controlSize(.small)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+    }
+
+    @ViewBuilder private var filters: some View {
             Menu {
                 ForEach(FileCategory.allCases) { category in
                     Toggle(isOn: Binding(
@@ -256,10 +283,6 @@ struct FilterBar: View {
             if model.filter.isActive {
                 Button("Clear") { model.filter = FileFilter() }.buttonStyle(.borderless)
             }
-        }
-        .controlSize(.small)
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
     }
 
     private func months(before date: Date) -> Int {
@@ -279,7 +302,7 @@ struct VisualizationPane: View {
                 HStack(spacing: 2) {
                     ForEach(tree.lineage(model.focus), id: \.self) { id in
                         if id != FileTree.root { Image(systemName: "chevron.right").font(.caption2).foregroundStyle(.tertiary) }
-                        Button(id == FileTree.root ? model.currentTarget.title : tree.name(id)) {
+                        Button(model.displayName(id)) {
                             model.focus = id
                         }
                         .buttonStyle(.borderless)
@@ -316,9 +339,18 @@ private struct HoverLine: View {
                 Text(Format.bytes(tree.size(id))).monospacedDigit()
                 SafetyBadge(level: tree.safety(id), compact: true)
             } else {
-                Text("Click to select, double-click to zoom in, right-click for actions.").foregroundStyle(.secondary)
-                Spacer()
-                legend
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 8) {
+                        Text("Click to select, double-click to zoom in, right-click for actions.")
+                            .foregroundStyle(.secondary).fixedSize()
+                        Spacer()
+                        legend
+                    }
+                    HStack(spacing: 8) {
+                        Spacer()
+                        legend
+                    }
+                }
             }
         }
         .font(.callout)
@@ -329,17 +361,17 @@ private struct HoverLine: View {
     @ViewBuilder private var legend: some View {
         switch model.colors {
         case .type:
-            ForEach([FileCategory.video, .audio, .image, .document, .archive, .diskImage, .app, .code], id: \.self) { category in
+            ForEach([FileCategory.video, .audio, .image, .document, .archive, .app], id: \.self) { category in
                 HStack(spacing: 3) {
                     RoundedRectangle(cornerRadius: 2).fill(Palette.color(category)).frame(width: 9, height: 9)
-                    Text(category.title).font(.caption)
+                    Text(category.title).font(.caption).fixedSize()
                 }
             }
         case .safety:
             ForEach(SafetyLevel.allCases, id: \.self) { level in
                 HStack(spacing: 3) {
                     RoundedRectangle(cornerRadius: 2).fill(Palette.color(level)).frame(width: 9, height: 9)
-                    Text(level.title).font(.caption)
+                    Text(level.title).font(.caption).fixedSize()
                 }
             }
         }

@@ -32,6 +32,7 @@ struct SettingsView: View {
     @State private var presence = PresenceSettings.shared
     @State private var fullDiskAccess = FullDiskAccess.isGranted
     @State private var cacheCleared = false
+    @AppStorage("checkForUpdatesAutomatically") private var checkAutomatically = true
 
     var body: some View {
         Form {
@@ -65,8 +66,11 @@ struct SettingsView: View {
                 }
                 .disabled(cacheCleared)
             }
-            Section {
-                LabeledContent("Version", value: AppInfo.displayVersion)
+            Section("Updates") {
+                Toggle("Check for updates when DiskLens opens", isOn: $checkAutomatically)
+                LabeledContent("Version \(AppInfo.displayVersion)") {
+                    Button("Check Now") { UpdateController.checkForUpdates() }
+                }
             }
         }
         .formStyle(.grouped)

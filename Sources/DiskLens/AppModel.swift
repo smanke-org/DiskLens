@@ -94,9 +94,11 @@ final class AppModel {
 
     init() {
         let saved = UserDefaults.standard.stringArray(forKey: "scanTargets") ?? []
-        targets = [ScanTarget(path: NSHomeDirectory())]
+        let initialTargets = [ScanTarget(path: NSHomeDirectory())]
             + saved.filter { $0 != NSHomeDirectory() }.map { ScanTarget(path: $0) }
-        selectedTarget = NSHomeDirectory()
+        targets = initialTargets
+        let last = UserDefaults.standard.string(forKey: "selectedTarget") ?? ""
+        selectedTarget = initialTargets.contains { $0.id == last } ? last : NSHomeDirectory()
         style = VisualizationStyle(rawValue: UserDefaults.standard.string(forKey: "visualizationStyle") ?? "") ?? .treemap
         colors = ColorScheme(rawValue: UserDefaults.standard.string(forKey: "colorScheme") ?? "") ?? .type
     }
@@ -143,6 +145,7 @@ final class AppModel {
         guard id != selectedTarget || tree == nil else { return }
         cancelScan()
         selectedTarget = id
+        UserDefaults.standard.set(id, forKey: "selectedTarget")
         tree = nil
         treeVersion += 1
         phase = .loading
@@ -255,6 +258,12 @@ final class AppModel {
         guard let tree else { return }
         if let parent = tree.parent(id) { focus = parent }
         selection = id
+    }
+
+    /// An item's name, with the scanned folder shown by its location title rather than its path.
+    func displayName(_ id: NodeID) -> String {
+        guard let tree else { return "" }
+        return id == FileTree.root ? currentTarget.title : tree.name(id)
     }
 
     func revealInFinder(_ id: NodeID) {

@@ -73,11 +73,11 @@ struct FileListView: View {
                         }
                     }
                 }
-                .width(min: 180, ideal: 320)
+                .width(min: 160, ideal: 260)
                 TableColumn("Size", value: \.size) { row in
                     SizeCell(size: row.size, total: tree.size(model.focus))
                 }
-                .width(min: 120, ideal: 150)
+                .width(min: 125, ideal: 130)
                 TableColumn("Last Used", value: \.lastUsed) { row in
                     Text(Format.relative(row.lastUsed))
                         .foregroundStyle(row.lastUsedIsEstimate ? .secondary : .primary)
@@ -85,19 +85,19 @@ struct FileListView: View {
                               ? "Spotlight has no record of this being opened; estimated from when it was last read or changed."
                               : "Last opened, according to Spotlight.")
                 }
-                .width(min: 90, ideal: 110)
-                TableColumn("Modified", value: \.modified) { row in
-                    Text(Format.date(row.modified))
-                }
                 .width(min: 80, ideal: 100)
+                TableColumn("Modified", value: \.modified) { row in
+                    Text(Format.date(row.modified)).fixedSize()
+                }
+                .width(min: 95, ideal: 100)
                 TableColumn("Kind", value: \.kindTitle) { row in
                     Text(row.kindTitle).foregroundStyle(.secondary)
                 }
-                .width(min: 70, ideal: 110)
+                .width(min: 60, ideal: 90)
                 TableColumn("Safety", value: \.safetyRank) { row in
                     SafetyBadge(level: row.safety, compact: true)
                 }
-                .width(min: 90, ideal: 110)
+                .width(min: 80, ideal: 95)
             }
             .contextMenu(forSelectionType: NodeID.self) { ids in
                 if ids.count == 1, let id = ids.first {
@@ -141,7 +141,7 @@ struct SizeCell: View {
 
     var body: some View {
         HStack(spacing: 6) {
-            Text(Format.bytes(size)).monospacedDigit().frame(minWidth: 60, alignment: .trailing)
+            Text(Format.bytes(size)).monospacedDigit().fixedSize().frame(minWidth: 62, alignment: .trailing)
             GeometryReader { geometry in
                 Capsule().fill(.quaternary)
                     .overlay(alignment: .leading) {
@@ -149,6 +149,7 @@ struct SizeCell: View {
                             .frame(width: geometry.size.width * CGFloat(total > 0 ? min(1, Double(size) / Double(total)) : 0))
                     }
             }
+            .frame(maxWidth: 50)
             .frame(height: 5)
         }
     }

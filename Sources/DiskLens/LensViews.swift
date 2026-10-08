@@ -37,7 +37,8 @@ struct LargestFilesView: View {
     var body: some View {
         FileListView(model: model, ids: ids, showLocation: true)
             .task(id: QueryKey(focus: model.focus, version: model.treeVersion, filter: model.filter)) {
-                let tree = tree, focus = model.focus, filter = model.filter
+                guard let tree = model.tree else { return }
+                let focus = model.focus, filter = model.filter
                 ids = await Task.detached { tree.largestFiles(under: focus, limit: 500, filter: filter) }.value
             }
     }
@@ -79,7 +80,8 @@ struct LeastUsedView: View {
     private func load() async {
         loading = true
         defer { loading = false }
-        let tree = tree, focus = model.focus
+        guard let tree = model.tree else { return }
+        let focus = model.focus
         var filter = model.filter
         let cutoff = filter.unusedSince
         filter.unusedSince = nil
@@ -184,13 +186,13 @@ struct DuplicatesView: View {
                         .foregroundStyle(.secondary)
                     Button("Stop") { duplicates.cancel() }
                 } else {
-                    Button(duplicates.groups.isEmpty ? "Find Duplicates in “\(tree.name(model.focus))”" : "Search Again") {
+                    Button(duplicates.groups.isEmpty ? "Find Duplicates in “\(model.displayName(model.focus))”" : "Search Again") {
                         duplicates.start(tree, under: model.focus)
                     }
                     .buttonStyle(.borderedProminent)
                     if case .done = duplicates.state {
                         Text(duplicates.groups.isEmpty ? "No duplicates over 1 MB found."
-                             : "\(duplicates.groups.count) sets of identical files; \(Format.bytes(duplicates.reclaimable)) could be freed.")
+                             : "\(duplicates.groups.count == 1 ? "1 set" : "\(duplicates.groups.count) sets") of identical files; \(Format.bytes(duplicates.reclaimable)) could be freed.")
                             .foregroundStyle(.secondary)
                     } else {
                         Text("Compares the contents of files over 1 MB.").foregroundStyle(.secondary)
