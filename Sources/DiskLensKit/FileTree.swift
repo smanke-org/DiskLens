@@ -31,6 +31,8 @@ public final class FileTree: @unchecked Sendable {
     public let rootPath: String
     public let scannedAt: Date
     public let classifier: SafetyClassifier
+    /// The FSEvents event ID when the scan started; changes after it are replayed on rescan.
+    public internal(set) var eventID: UInt64 = 0
 
     var names: [String] = []
     var parents: [NodeID] = []
@@ -45,6 +47,7 @@ public final class FileTree: @unchecked Sendable {
     var ownRules: [Int16] = []
     var effectiveLevels: [SafetyLevel] = []
     var fileCounts: [Int32] = []
+    var bsdFlagValues: [UInt32] = []
 
     public static let root: NodeID = 0
 

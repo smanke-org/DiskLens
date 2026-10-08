@@ -26,7 +26,7 @@ import Testing
     }
 
     private func scan() throws -> FileTree {
-        try #require(Scanner(root: fixture.path, threads: 3).scanSync())
+        try #require(DiskScanner(root: fixture.path, threads: 3).scanSync())
     }
 
     private func du(_ path: String) throws -> Int64 {
@@ -97,7 +97,7 @@ import Testing
         for (index, name) in components.enumerated() {
             let isLast = index == components.count - 1
             let nodeKind: NodeKind = isLast ? kind
-                : (Scanner.packageExtensions.contains((name as NSString).pathExtension) ? .package : .directory)
+                : (DiskScanner.packageExtensions.contains((name as NSString).pathExtension) ? .package : .directory)
             (rule, cursor) = classifier.child(of: cursor, name: name, kind: nodeKind, bsdFlags: isLast ? flags : 0)
         }
         return classifier.level(ruleIndex: rule)
