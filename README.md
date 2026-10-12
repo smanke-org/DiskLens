@@ -70,13 +70,27 @@ Requires macOS 26 or later. Signed with Developer ID and notarized by Apple.
 
 ## Updates
 
-DiskLens checks GitHub for a new release when it opens. If there is one, the sidebar shows
-*Update to …*, and it installs only when you click it. You can also choose
-*Check for Updates…* from the DiskLens menu, or turn off automatic checks in Settings.
+DiskLens checks GitHub for a new release when it opens and every 30 minutes. In Settings
+you choose what happens when it finds one:
+
+- **Ask me first** (the default): a notification and *Update to …* in the sidebar; nothing
+  installs until you click it.
+- **Install automatically**: the update is downloaded and checked right away, then installed
+  once no scan is running, nothing is waiting in the Trash list, no app is presenting or
+  keeping the display awake, and the Mac hasn't been used for 2 minutes.
+- **Don't check**: *Check for Updates…* in the DiskLens menu still works.
 
 Before installing, DiskLens makes sure the download is signed by the same developer and
 notarized by Apple. It updates the app in place, so Full Disk Access and your settings
 carry over.
+
+## Settings sync
+
+Turn on *Sync settings with your other Macs* in Settings and where DiskLens appears, its
+colors, chart style and cleanup threshold follow you to every Mac on the same iCloud
+account, through `iCloud Drive/DiskLens/Settings.plist`. The folders you scan and your saved
+scans stay on each Mac. A brand-new install that finds this file turns sync on and starts
+from your settings.
 
 ## Building
 

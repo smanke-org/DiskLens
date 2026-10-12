@@ -103,6 +103,12 @@ final class AppModel {
         colors = ColorScheme(rawValue: UserDefaults.standard.string(forKey: "colorScheme") ?? "") ?? .type
     }
 
+    /// Picks up the chart style and colors after another Mac's settings were adopted.
+    func reloadSyncedSettings() {
+        style = VisualizationStyle(rawValue: UserDefaults.standard.string(forKey: "visualizationStyle") ?? "") ?? .treemap
+        colors = ColorScheme(rawValue: UserDefaults.standard.string(forKey: "colorScheme") ?? "") ?? .type
+    }
+
     var isScanning: Bool {
         if case .scanning = phase { return true }
         return false

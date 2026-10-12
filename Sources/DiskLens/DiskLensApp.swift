@@ -8,7 +8,20 @@ struct DiskLensApp: App {
     @State private var presence = PresenceSettings.shared
 
     init() {
+        // Before anything saves a setting: an empty domain means a brand-new install.
+        AppDelegate.newInstall = SettingsSync.domainIsEmpty()
         SettingsWindow.shared.makeContent = { AnyView(SettingsView()) }
+        let model = self.model
+        // An automatic update must not restart DiskLens in the middle of its work.
+        AutoUpdater.shared.appBusyReason = {
+            if model.isScanning { return "a scan is running" }
+            if !model.basket.isEmpty { return "items are waiting in the Trash list" }
+            return nil
+        }
+        SettingsSync.shared.onApply = {
+            model.reloadSyncedSettings()
+            PresenceSettings.shared.reload()
+        }
     }
 
     var body: some Scene {
@@ -19,7 +32,7 @@ struct DiskLensApp: App {
         .defaultSize(width: 1280, height: 820)
         .commands {
             CommandGroup(after: .appInfo) {
-                Button("Check for Updates…") { UpdateController.checkForUpdates() }
+                Button("Check for Updates…") { AutoUpdater.shared.installNow() }
             }
             CommandGroup(replacing: .appSettings) {
                 Button("Settings…") { SettingsWindow.shared.show() }
@@ -64,6 +77,12 @@ final class PresenceSettings {
     var showInMenuBar = AppPresence.showInMenuBar {
         didSet { AppPresence.showInMenuBar = showInMenuBar }
     }
+
+    /// Follows choices that arrived from another Mac.
+    func reload() {
+        if showInDock != AppPresence.showInDock { showInDock = AppPresence.showInDock }
+        if showInMenuBar != AppPresence.showInMenuBar { showInMenuBar = AppPresence.showInMenuBar }
+    }
 }
 
 /// The menu bar item's panel: free space at a glance and a way back to the window.
@@ -101,11 +120,14 @@ struct MenuBarPanel: View {
 /// The Dock icon's menu, and what happens when the app is opened again.
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
+    /// Set by DiskLensApp.init, which runs before anything is stored.
+    static var newInstall = false
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         if !AppPresence.showInDock { AppPresence.applyDock() }
-        if UserDefaults.standard.object(forKey: "checkForUpdatesAutomatically") as? Bool ?? true {
-            UpdateController.checkForUpdates(silent: true)
-        }
+        if Self.newInstall { SettingsSync.shared.adoptOnNewInstall() }
+        SettingsSync.shared.start()
+        AutoUpdater.shared.start()
     }
 
     func applicationDockMenu(_ sender: NSApplication) -> NSMenu? {

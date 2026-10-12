@@ -87,12 +87,17 @@ enum UpdateController {
 
     // MARK: - Release lookup
 
-    private struct Release {
+    struct Release {
         let version: String
         let downloadURL: URL
     }
 
-    private static func fetchLatestRelease() async throws -> Release? {
+    /// The latest release, or nil if none is published, for the background checker.
+    static func latestRelease() async throws -> Release? {
+        try await fetchLatestRelease()
+    }
+
+    static func fetchLatestRelease() async throws -> Release? {
         var request = URLRequest(url: URL(string: "https://api.github.com/repos/\(repository)/releases/latest")!)
         request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
         // GitHub rejects API requests without one.
@@ -139,7 +144,7 @@ enum UpdateController {
 
     // MARK: - Download
 
-    private static func downloadAndStage(_ release: Release) async throws -> URL {
+    static func downloadAndStage(_ release: Release) async throws -> URL {
         let (downloadedURL, response) = try await URLSession.shared.download(from: release.downloadURL)
         guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
             throw fail("The download failed.")
@@ -171,7 +176,7 @@ enum UpdateController {
 
     // MARK: - Verification
 
-    private static func verifySignature(of app: URL) throws {
+    static func verifySignature(of app: URL) throws {
         let verify = run("/usr/bin/codesign", ["--verify", "--deep", "--strict", app.path])
         guard verify.status == 0 else {
             throw fail("The downloaded app's signature is not valid, so it was not installed.")
@@ -209,7 +214,7 @@ enum UpdateController {
     /// Hands the swap to a detached shell script, because the app cannot replace and
     /// relaunch itself while it is the one running.
     @MainActor
-    private static func installAndRelaunch(from stagedApp: URL) throws {
+    static func installAndRelaunch(from stagedApp: URL) throws {
         let destination = Bundle.main.bundlePath
         let staging = stagedApp.deletingLastPathComponent()
         let script = staging.appendingPathComponent("install.sh")
