@@ -1,6 +1,6 @@
 #!/usr/bin/env swift
 // Generates the app icon in the same periodic-table style as M3 Tracker: atomic number
-// "28", tipped 45° to the left, the "Dl" symbol, and the name along the bottom, on
+// "27", tipped 45° to the left, the "Dl" symbol, and the name along the bottom, on
 // a white tile.
 // Run with:
 //   swift Tools/generate_icon.swift
@@ -92,7 +92,7 @@ func size(of string: String, size: CGFloat) -> NSSize {
 // Atomic number, top-left, tipped 45° to the left (counterclockwise) about
 // its own centre. Nudged up in the small variant so it still reads once the
 // name is gone.
-let number = "28"
+let number = "27"
 let numberSize = side * (includeName ? 0.115 : 0.135)
 let numberInset = side * 0.075
 let numberBox = size(of: number, size: numberSize)
