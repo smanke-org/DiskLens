@@ -94,7 +94,7 @@ final class AutoUpdater: NSObject, ObservableObject, UNUserNotificationCenterDel
                     notifyAvailable(release.version)
                 case .automatic:
                     let app = try await UpdateController.downloadAndStage(release)
-                    try UpdateController.verifySignature(of: app)
+                    try UpdateController.verifyCandidate(app, version: release.version)
                     staged = (release.version, app)
                     lastError = nil
                     NSLog("DiskLens: update \(release.version) verified; waiting for a quiet moment to install")
@@ -164,11 +164,15 @@ final class AutoUpdater: NSObject, ObservableObject, UNUserNotificationCenterDel
 
     private func install(_ app: URL, version: String) {
         do {
+            // Checked again now: the staged copy may have waited hours in a folder that other
+            // processes of this user can write to.
+            try UpdateController.verifyCandidate(app, version: version)
             UserDefaults.standard.set(AppInfo.version, forKey: Self.installedFromKey)
             NSLog("DiskLens: installing update \(version)")
             try UpdateController.installAndRelaunch(from: app)
         } catch {
             UserDefaults.standard.removeObject(forKey: Self.installedFromKey)
+            NSLog("DiskLens: update \(version) not installed: \(error.localizedDescription)")
             lastError = error.localizedDescription
             staged = nil
         }

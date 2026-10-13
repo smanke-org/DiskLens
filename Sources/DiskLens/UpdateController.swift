@@ -71,7 +71,7 @@ enum UpdateController {
                 }
 
                 let stagedApp = try await downloadAndStage(release)
-                try verifySignature(of: stagedApp)
+                try verifyCandidate(stagedApp, version: release.version)
                 try installAndRelaunch(from: stagedApp)
                 // Control does not return: the app is replaced and restarted.
             } catch {
@@ -156,6 +156,8 @@ enum UpdateController {
 
         let dmg = staging.appendingPathComponent("update.dmg")
         try FileManager.default.moveItem(at: downloadedURL, to: dmg)
+        // Before the disk image is mounted at all: same developer, notarized by Apple.
+        try verifyDiskImage(dmg)
 
         // Mount read-only and without opening a Finder window.
         let mountPoint = staging.appendingPathComponent("mount")
@@ -199,6 +201,38 @@ enum UpdateController {
         }
     }
 
+    /// Checks the downloaded disk image before it is mounted: signed by the same team as this
+    /// copy, and notarized by Apple. Mounting an image runs the system's disk-image and
+    /// file-system code on whatever was downloaded, so it is not done for an unverified one.
+    static func verifyDiskImage(_ dmg: URL) throws {
+        guard let runningTeam = teamIdentifier(of: Bundle.main.bundlePath) else {
+            throw fail("This copy of the app is unsigned, so an update cannot be verified against it.")
+        }
+        guard teamIdentifier(of: dmg.path) == runningTeam else {
+            throw fail("The downloaded disk image isn't signed by this app's developer, so it was not opened.")
+        }
+        let assess = run("/usr/sbin/spctl", ["-a", "-t", "open", "--context", "context:primary-signature", dmg.path])
+        guard assess.status == 0 else {
+            throw fail("The downloaded disk image isn't notarized by Apple, so it was not opened.")
+        }
+    }
+
+    /// Everything `verifySignature` checks, plus: it is this app (same bundle identifier) and
+    /// exactly the version the release announced, which must be newer than this copy. Without
+    /// these, any older or different app signed by the same team would pass. Run again right
+    /// before a deferred install, because the staged copy could have changed while it waited.
+    static func verifyCandidate(_ app: URL, version: String) throws {
+        try verifySignature(of: app)
+        let info = NSDictionary(contentsOf: app.appendingPathComponent("Contents/Info.plist"))
+        guard let identifier = info?["CFBundleIdentifier"] as? String, identifier == Bundle.main.bundleIdentifier else {
+            throw fail("The download is a different app, so it was not installed.")
+        }
+        guard let staged = info?["CFBundleShortVersionString"] as? String, staged == version,
+              isNewer(staged, than: AppInfo.version) else {
+            throw fail("The download isn't the expected newer version, so it was not installed.")
+        }
+    }
+
     private static func teamIdentifier(of path: String) -> String? {
         let result = run("/usr/bin/codesign", ["-dvvv", path])
         // codesign writes its description to stderr, which run() folds in.
@@ -218,32 +252,44 @@ enum UpdateController {
         let destination = Bundle.main.bundlePath
         let staging = stagedApp.deletingLastPathComponent()
         let script = staging.appendingPathComponent("install.sh")
+        guard let team = teamIdentifier(of: destination), let identifier = Bundle.main.bundleIdentifier else {
+            throw fail("This copy of the app is unsigned, so an update cannot be verified against it.")
+        }
 
         // The bundle is updated *in place* rather than deleted and recreated, so the Login
-        // Items registration and any privacy approvals keep pointing at the same app. A
-        // backup is kept alongside only long enough to roll back a failed sync.
-        let body = """
+        // Items registration and privacy approvals keep pointing at the same app.
+        //
+        // Paths and identifiers arrive as arguments, never spliced into the script's text.
+        // The staged copy is checked once more just before it is copied (it sat in a folder
+        // other processes of this user can write to), the installed result is checked after,
+        // and anything that fails is rolled back from a backup. The download flag is removed
+        // only from a result that passed.
+        let body = #"""
         #!/bin/sh
-        # Wait for the running app to quit before replacing its bundle.
-        while kill -0 \(ProcessInfo.processInfo.processIdentifier) 2>/dev/null; do sleep 0.2; done
-        /bin/rm -rf "\(destination).backup"
-        /bin/cp -R "\(destination)" "\(destination).backup"
-        if /usr/bin/rsync -a --delete "\(stagedApp.path)/" "\(destination)/"; then
-          /bin/rm -rf "\(destination).backup"
-        else
-          /usr/bin/rsync -a --delete "\(destination).backup/" "\(destination)/"
-          /bin/rm -rf "\(destination).backup"
+        PID="$1"; SRC="$2"; DEST="$3"; REQ="$4"; STAGING="$5"
+        while kill -0 "$PID" 2>/dev/null; do sleep 0.2; done
+        if ! /usr/bin/codesign --verify --deep --strict -R "=$REQ" "$SRC" 2>/dev/null; then
+          /usr/bin/open "$DEST"; /bin/rm -rf "$STAGING"; exit 1
         fi
-        # Verified above, so clear the download flag to avoid a redundant prompt.
-        /usr/bin/xattr -dr com.apple.quarantine "\(destination)" 2>/dev/null
-        /usr/bin/open "\(destination)"
-        /bin/rm -rf "\(staging.path)"
-        """
+        /bin/rm -rf "$DEST.backup"
+        /bin/cp -R "$DEST" "$DEST.backup"
+        if /usr/bin/rsync -a --delete "$SRC/" "$DEST/" && /usr/bin/codesign --verify --deep --strict -R "=$REQ" "$DEST" 2>/dev/null; then
+          /bin/rm -rf "$DEST.backup"
+          /usr/bin/xattr -dr com.apple.quarantine "$DEST" 2>/dev/null
+        else
+          /usr/bin/rsync -a --delete "$DEST.backup/" "$DEST/"
+          /bin/rm -rf "$DEST.backup"
+        fi
+        /usr/bin/open "$DEST"
+        /bin/rm -rf "$STAGING"
+        """#
         try body.write(to: script, atomically: true, encoding: .utf8)
 
+        let requirement = "identifier \"\(identifier)\" and anchor apple generic and certificate leaf[subject.OU] = \"\(team)\""
         let task = Process()
         task.executableURL = URL(fileURLWithPath: "/bin/sh")
-        task.arguments = [script.path]
+        task.arguments = [script.path, "\(ProcessInfo.processInfo.processIdentifier)", stagedApp.path,
+                          destination, requirement, staging.path]
         try task.run()
 
         NSApp.terminate(nil)
