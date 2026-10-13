@@ -13,12 +13,21 @@ final class SettingsWindow {
 
     func show() {
         if window == nil, let makeContent {
-            let hosting = NSHostingController(rootView: makeContent())
-            // Without this a grouped Form has no natural height and opens as a sliver.
-            hosting.sizingOptions = [.preferredContentSize]
+            let content = makeContent()
+            // The Form's natural height, capped to the screen, with the Form scrolling
+            // inside. Letting SwiftUI size the window to the Form's full height crashed
+            // once the Form grew taller than the screen: AppKit clamped the window,
+            // SwiftUI asked to grow again, and AppKit aborted the update-constraints loop.
+            let natural = NSHostingView(rootView: content).fittingSize.height
+            let hosting = NSHostingController(rootView: content.frame(maxHeight: .infinity))
+            hosting.sizingOptions = []
             let window = NSWindow(contentViewController: hosting)
             window.title = "DiskLens Settings"
-            window.styleMask = [.titled, .closable]
+            window.styleMask = [.titled, .closable, .resizable]
+            let available = (NSScreen.main?.visibleFrame.height ?? 800) - 80
+            window.setContentSize(NSSize(width: 460, height: min(max(natural, 300), available)))
+            window.contentMinSize = NSSize(width: 460, height: 300)
+            window.contentMaxSize = NSSize(width: 460, height: CGFloat.greatestFiniteMagnitude)
             window.isReleasedWhenClosed = false
             window.center()
             self.window = window
