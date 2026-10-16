@@ -32,6 +32,8 @@ struct DiskLensApp: App {
         .defaultSize(width: 1280, height: 820)
         .commands {
             CommandGroup(after: .appInfo) {
+                // Right below About: the developer's site, which lists every app.
+                Button("Our other apps…") { if let url = URL(string: "https://stevemanke.com/") { NSWorkspace.shared.open(url) } }
                 Button("Check for Updates…") { AutoUpdater.shared.installNow() }
             }
             CommandGroup(replacing: .appSettings) {
