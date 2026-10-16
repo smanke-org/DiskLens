@@ -104,6 +104,8 @@ struct MenuBarPanel: View {
                 NSApp.activate(ignoringOtherApps: true)
             }
             Button("Settings…") { SettingsWindow.shared.show() }
+            Button("About DiskLens") { NSApp.activate(ignoringOtherApps: true); NSApp.orderFrontStandardAboutPanel(nil) }
+            Button("Our other apps…") { if let url = URL(string: "https://stevemanke.com/") { NSWorkspace.shared.open(url) } }
             Button("Quit DiskLens") { NSApp.terminate(nil) }
         }
         .buttonStyle(.borderless)
