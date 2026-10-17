@@ -22,6 +22,15 @@ struct DiskLensApp: App {
             model.reloadSyncedSettings()
             PresenceSettings.shared.reload()
         }
+        AppDelegate.onURL = { url in
+            switch url.host {
+            case "scan-home":
+                let home = NSHomeDirectory()
+                if model.selectedTarget == home { model.scan() } else { model.select(home) }
+            default:
+                break
+            }
+        }
     }
 
     var body: some Scene {
@@ -126,6 +135,8 @@ struct MenuBarPanel: View {
 final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Set by DiskLensApp.init, which runs before anything is stored.
     static var newInstall = false
+    /// Runs a `disklens://` URL; set by DiskLensApp.init, which owns the model.
+    static var onURL: ((URL) -> Void)?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         if !AppPresence.showInDock { AppPresence.applyDock() }
@@ -147,6 +158,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         false
+    }
+
+    /// `disklens://open` and `disklens://scan-home` (from ToolHUD, Shortcuts or a script)
+    /// bring DiskLens forward; the second also scans your home folder.
+    func application(_ application: NSApplication, open urls: [URL]) {
+        for url in urls where url.scheme == "disklens" {
+            NSApp.activate(ignoringOtherApps: true)
+            Self.onURL?(url)
+        }
     }
 
     @objc func showSettings() {

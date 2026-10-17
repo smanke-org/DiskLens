@@ -16,6 +16,17 @@
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
 	<string>1.0.6</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>DiskLens</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>disklens</string>
+			</array>
+		</dict>
+	</array>
 	<key>CFBundleVersion</key>
 	<string>1.0.6</string>
 	<key>LSApplicationCategoryType</key>
@@ -24,5 +35,32 @@
 	<string>26.0</string>
 	<key>NSHumanReadableCopyright</key>
 	<string>Copyright © 2026 Steve Manke</string>
+	<key>ToolHUDActions</key>
+	<array>
+		<dict>
+			<key>activates</key>
+			<true/>
+			<key>id</key>
+			<string>open</string>
+			<key>shortTitle</key>
+			<string>Disk space</string>
+			<key>symbol</key>
+			<string>internaldrive</string>
+			<key>title</key>
+			<string>Open DiskLens</string>
+		</dict>
+		<dict>
+			<key>activates</key>
+			<true/>
+			<key>id</key>
+			<string>scan-home</string>
+			<key>shortTitle</key>
+			<string>Scan home</string>
+			<key>symbol</key>
+			<string>house</string>
+			<key>title</key>
+			<string>Scan your home folder</string>
+		</dict>
+	</array>
 </dict>
 </plist>

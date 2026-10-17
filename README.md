@@ -65,6 +65,8 @@ Requires macOS 26 or later. Signed with Developer ID and notarized by Apple.
 - **Accurate totals.** Sizes are space actually used on disk: hard links count once,
   sparse files and iCloud files that aren't downloaded count as what they take locally.
 - **Any folder or drive.** Add other folders or external drives to the sidebar.
+- **URLs** for ToolHUD, Shortcuts or scripts: `disklens://open` brings DiskLens forward and
+  `disklens://scan-home` scans your home folder.
 - **Dock, menu bar, both or neither.** Choose in Settings. The menu bar item shows free
   space with one click. Right-click the Dock icon for **Settings…**.
 
