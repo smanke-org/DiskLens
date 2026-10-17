@@ -140,7 +140,7 @@ enum TrashConfirmation {
         }
     }
 
-    private final class CheckboxTarget: NSObject {
+    @MainActor private final class CheckboxTarget: NSObject {
         let button: NSButton
         init(button: NSButton) { self.button = button }
         @objc func toggled(_ sender: NSButton) { button.isEnabled = sender.state == .on }
