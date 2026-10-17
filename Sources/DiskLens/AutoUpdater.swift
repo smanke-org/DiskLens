@@ -2,7 +2,8 @@ import AppKit
 import IOKit.pwr_mgt
 import UserNotifications
 
-/// Looks for updates every half hour and, depending on `UpdatePolicy`, notifies or installs.
+/// Looks for updates as often as the user chose (once a day unless they change it) and,
+/// depending on `UpdatePolicy`, notifies or installs.
 ///
 /// An automatic install quits and relaunches DiskLens, so a downloaded update waits until:
 /// - no app is holding the display awake (Keynote, PowerPoint, screen sharing and video
@@ -21,6 +22,18 @@ final class AutoUpdater: NSObject, ObservableObject, UNUserNotificationCenterDel
         }
     }
 
+    /// How often to look for updates on its own.
+    @Published var interval = UpdateInterval.current {
+        didSet {
+            guard interval != oldValue else { return }
+            // Only a real change: a value read from another Mac before its unit has arrived must not
+            // be stored back clamped to the old unit.
+            if UpdateInterval.current != interval { UpdateInterval.current = interval }
+            scheduleChecks()
+            checkIfDue()
+        }
+    }
+
     /// A verified update waiting for a quiet moment.
     @Published private(set) var staged: (version: String, app: URL)?
     @Published private(set) var lastError: String?
@@ -33,11 +46,15 @@ final class AutoUpdater: NSObject, ObservableObject, UNUserNotificationCenterDel
     private var checking = false
 
     // Overridable for testing, so a run doesn't take half an hour.
-    private let checkInterval = TimeInterval(ProcessInfo.processInfo.environment["DISKLENS_UPDATE_CHECK_SECONDS"].flatMap(Double.init) ?? 30 * 60)
+    /// When set, the number of seconds between checks, in place of the chosen interval.
+    private let testCheckInterval = ProcessInfo.processInfo.environment["DISKLENS_UPDATE_CHECK_SECONDS"].flatMap(Double.init)
+    private var checkInterval: TimeInterval { testCheckInterval ?? interval.seconds }
     private let userIdle = TimeInterval(ProcessInfo.processInfo.environment["DISKLENS_UPDATE_USER_IDLE_SECONDS"].flatMap(Double.init) ?? 2 * 60)
 
     private static let installedFromKey = "update.autoInstalledFrom"
     private static let notifiedVersionKey = "update.notifiedVersion"
+    /// When this Mac last asked GitHub; not synced, so each Mac keeps its own schedule.
+    private static let lastCheckKey = "update.lastCheck"
     nonisolated private static let category = "update"
     private static let installAction = "install"
 
@@ -51,16 +68,16 @@ final class AutoUpdater: NSObject, ObservableObject, UNUserNotificationCenterDel
         announceIfJustUpdated()
 
         // A few seconds after launch, so startup isn't waiting on the network.
-        DispatchQueue.main.asyncAfter(deadline: .now() + 4) { AutoUpdater.shared.check() }
-        checkTimer = Timer.scheduledTimer(withTimeInterval: checkInterval, repeats: true) { _ in
-            Task { @MainActor in AutoUpdater.shared.check() }
-        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 4) { AutoUpdater.shared.checkIfDue() }
+        scheduleChecks()
     }
 
-    /// Follows a policy that arrived from another Mac.
+    /// Follows update choices that arrived from another Mac.
     func reloadPolicy() {
         let stored = UpdatePolicy.current
         if policy != stored { policy = stored }
+        let storedInterval = UpdateInterval.current
+        if interval != storedInterval { interval = storedInterval }
     }
 
     /// Install a waiting (or available) update now, because the user asked to.
@@ -72,15 +89,36 @@ final class AutoUpdater: NSObject, ObservableObject, UNUserNotificationCenterDel
         }
     }
 
+    /// Ticks every 15 minutes (or sooner, for a shorter interval) and compares the clock with
+    /// the last check, because a Timer stops counting while the Mac sleeps: a day-long one
+    /// could otherwise wait for days.
+    private func scheduleChecks() {
+        checkTimer?.invalidate()
+        checkTimer = Timer.scheduledTimer(withTimeInterval: min(checkInterval, 15 * 60), repeats: true) { _ in
+            Task { @MainActor in AutoUpdater.shared.checkIfDue() }
+        }
+    }
+
+    /// Checks if the chosen interval has passed since this Mac last asked.
+    func checkIfDue() {
+        if let last = UserDefaults.standard.object(forKey: Self.lastCheckKey) as? Date,
+           Date().timeIntervalSince(last) < checkInterval - 1 { return }
+        check()
+    }
+
     // MARK: - Checking
 
     func check() {
         guard policy != .off, !checking, staged == nil else { return }
         checking = true
+        UserDefaults.standard.set(Date(), forKey: Self.lastCheckKey)
         Task {
             defer { checking = false }
+            var reachedGitHub = false
             do {
-                guard let release = try await UpdateController.latestRelease(),
+                let latest = try await UpdateController.latestRelease()
+                reachedGitHub = true
+                guard let release = latest,
                       UpdateController.isNewer(release.version, than: AppInfo.version) else {
                     UpdateAvailability.shared.pending = nil
                     return
@@ -102,6 +140,7 @@ final class AutoUpdater: NSObject, ObservableObject, UNUserNotificationCenterDel
                 }
             } catch {
                 lastError = error.localizedDescription
+                if !reachedGitHub { UserDefaults.standard.removeObject(forKey: Self.lastCheckKey) }
                 NSLog("DiskLens: update check failed: \(error.localizedDescription)")
                 // An automatic install that failed falls back to asking, once per version.
                 if policy == .automatic, let version = UpdateAvailability.shared.pending {
