@@ -44,6 +44,7 @@ struct SettingsView: View {
 
     var body: some View {
         Form {
+            AppearanceSection(appName: "DiskLens")
             Section("Where DiskLens appears") {
                 Toggle("Show in Dock", isOn: $presence.showInDock)
                 Toggle("Show in menu bar", isOn: $presence.showInMenuBar)

@@ -139,6 +139,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     static var onURL: ((URL) -> Void)?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        AppAppearance.start()
         if !AppPresence.showInDock { AppPresence.applyDock() }
         if Self.newInstall { SettingsSync.shared.adoptOnNewInstall() }
         SettingsSync.shared.start()
