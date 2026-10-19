@@ -13,7 +13,16 @@ final class SettingsWindow {
 
     func show() {
         if window == nil, let makeContent {
-            let content = makeContent()
+            // The round Help button in the corner, as macOS does.
+            let content = AnyView(VStack(spacing: 0) {
+                makeContent()
+                HStack {
+                    Spacer()
+                    HelpButton(topic: "getting-started").fixedSize()
+                }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 10)
+            })
             // The Form's natural height, capped to the screen, with the Form scrolling
             // inside. Letting SwiftUI size the window to the Form's full height crashed
             // once the Form grew taller than the screen: AppKit clamped the window,
@@ -35,6 +44,10 @@ final class SettingsWindow {
         NSApp.activate(ignoringOtherApps: true)
         window?.makeKeyAndOrderFront(nil)
     }
+
+    #if DEBUG
+    var debugWindow: NSWindow? { window }
+    #endif
 }
 
 struct SettingsView: View {

@@ -45,6 +45,10 @@ struct DiskLensApp: App {
                 Button("Our other apps…") { if let url = URL(string: "https://stevemanke.com/") { NSWorkspace.shared.open(url) } }
                 Button("Check for Updates…") { AutoUpdater.shared.installNow() }
             }
+            CommandGroup(replacing: .help) {
+                Button("DiskLens Help") { HelpWindow.shared.show() }
+                    .keyboardShortcut("?", modifiers: .command)
+            }
             CommandGroup(replacing: .appSettings) {
                 Button("Settings…") { SettingsWindow.shared.show() }
                     .keyboardShortcut(",", modifiers: .command)
@@ -112,6 +116,7 @@ struct MenuBarPanel: View {
                 openWindow(id: "main")
                 NSApp.activate(ignoringOtherApps: true)
             }
+            Button("DiskLens Help") { HelpWindow.shared.show() }
             Button("Settings…") { SettingsWindow.shared.show() }
             Button("About DiskLens") { NSApp.activate(ignoringOtherApps: true); NSApp.orderFrontStandardAboutPanel(nil) }
             Button("Our other apps…") { if let url = URL(string: "https://stevemanke.com/") { NSWorkspace.shared.open(url) } }
@@ -141,6 +146,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         AppAppearance.start()
         if !AppPresence.showInDock { AppPresence.applyDock() }
+        #if DEBUG
+        // A test run shares the installed app's settings, so it checks Help and stops
+        // before sync or updates start.
+        if let snapshot = ProcessInfo.processInfo.environment["DISKLENS_DEBUG_HELP_TEST"] {
+            DebugHelpTest.run(snapshot: snapshot, delegate: nil)
+            return
+        }
+        #endif
         if Self.newInstall { SettingsSync.shared.adoptOnNewInstall() }
         SettingsSync.shared.start()
         AutoUpdater.shared.start()
