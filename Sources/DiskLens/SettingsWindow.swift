@@ -52,6 +52,7 @@ final class SettingsWindow {
 
 struct SettingsView: View {
     @State private var presence = PresenceSettings.shared
+    @State private var hub = MenuHub.shared
     @State private var fullDiskAccess = FullDiskAccess.isGranted
     @State private var cacheCleared = false
 
@@ -61,6 +62,8 @@ struct SettingsView: View {
             Section("Where DiskLens appears") {
                 Toggle("Show in Dock", isOn: $presence.showInDock)
                 Toggle("Show in menu bar", isOn: $presence.showInMenuBar)
+                Toggle("Put in ToolHUD’s menu while ToolHUD is running", isOn: $hub.foldIntoToolHUD)
+                    .help("ToolHUD shows DiskLens’s menu bar panel as a submenu of its own, and DiskLens’s icon leaves the menu bar until ToolHUD quits.")
                 if !presence.showInDock && !presence.showInMenuBar {
                     Text(AppPresence.hiddenEverywhereNote(appName: "DiskLens", settingsName: "Settings"))
                         .font(.callout).foregroundStyle(.secondary)

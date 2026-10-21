@@ -6,6 +6,7 @@ struct DiskLensApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @State private var model = AppModel()
     @State private var presence = PresenceSettings.shared
+    @State private var hub = MenuHub.shared
 
     init() {
         // Before anything saves a setting: an empty domain means a brand-new install.
@@ -21,6 +22,7 @@ struct DiskLensApp: App {
         SettingsSync.shared.onApply = {
             model.reloadSyncedSettings()
             PresenceSettings.shared.reload()
+            MenuHub.shared.reload()
         }
         AppDelegate.onURL = { url in
             switch url.host {
@@ -66,7 +68,10 @@ struct DiskLensApp: App {
             }
         }
 
-        MenuBarExtra(isInserted: $presence.showInMenuBar) {
+        // ToolHUD can take the item into its own menu while it runs; that never changes the
+        // setting, so the icon comes back when ToolHUD quits.
+        MenuBarExtra(isInserted: Binding(get: { presence.showInMenuBar && !hub.isHosted },
+                                         set: { if !hub.isHosted { presence.showInMenuBar = $0 } })) {
             MenuBarPanel()
         } label: {
             Image(systemName: "chart.pie")
@@ -157,6 +162,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if Self.newInstall { SettingsSync.shared.adoptOnNewInstall() }
         SettingsSync.shared.start()
         AutoUpdater.shared.start()
+        HubMenu.shared.start()
     }
 
     func applicationDockMenu(_ sender: NSApplication) -> NSMenu? {

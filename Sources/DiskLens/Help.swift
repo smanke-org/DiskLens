@@ -51,6 +51,7 @@ enum Help {
             .heading("Full Disk Access"),
             .text("Without Full Disk Access, macOS hides some folders (Mail, Messages, Safari and other apps' data), and their space shows as unreadable. Turn it on in Settings › Access for a complete picture. DiskLens only reads sizes; it never uploads anything."),
             .tip("The menu bar icon shows how much space is free on your startup disk at a glance."),
+            .tip("While ToolHUD is running, DiskLens's free space and actions move into ToolHUD's menu bar menu as a submenu, and the icon here steps aside until ToolHUD quits. To keep the icon, turn off \"Put in ToolHUD's menu while ToolHUD is running\" in Settings."),
         ]),
 
         HelpTopic(id: "views", title: "Treemap and Sunburst", symbol: "square.grid.3x3.fill", blocks: [
