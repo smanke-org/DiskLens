@@ -103,3 +103,7 @@ swift test       # unit tests for DiskLensKit
 ```
 
 `./release.sh <version>` builds, notarizes, packages and publishes a GitHub release.
+
+## License
+
+© 2026 Steve Manke. All rights reserved.
