@@ -55,10 +55,20 @@ struct SettingsView: View {
     @State private var hub = MenuHub.shared
     @State private var fullDiskAccess = FullDiskAccess.isGranted
     @State private var cacheCleared = false
+    @AppStorage(QuitConfirmation.key) private var confirmQuit = true
 
     var body: some View {
         Form {
-            AppearanceSection(appName: "DiskLens")
+            Section {
+                AppearancePicker()
+                Toggle("Ask before quitting", isOn: $confirmQuit)
+                    .help("Quitting DiskLens asks first, so a stray ⌘Q doesn't stop a scan or lose the Trash list.")
+            } header: {
+                Text("General")
+            } footer: {
+                Text(AppAppearance.footer(appName: "DiskLens"))
+                    .font(.caption).foregroundStyle(.secondary)
+            }
             Section("Where DiskLens appears") {
                 Toggle("Show in Dock", isOn: $presence.showInDock)
                 Toggle("Show in menu bar", isOn: $presence.showInMenuBar)

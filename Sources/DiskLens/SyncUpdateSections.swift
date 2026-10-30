@@ -24,7 +24,7 @@ struct SyncUpdateSections: View {
         } header: {
             Text("iCloud")
         } footer: {
-            Text("Where DiskLens appears, its colors, chart style and cleanup threshold follow you to every Mac signed in to the same iCloud account with sync turned on. The folders you scan and your saved scans stay on each Mac.")
+            Text("Where DiskLens appears, its colors, chart style, cleanup threshold and asking before quitting follow you to every Mac signed in to the same iCloud account with sync turned on. The folders you scan and your saved scans stay on each Mac.")
                 .font(.caption).foregroundStyle(.secondary)
         }
         Section {

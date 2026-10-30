@@ -52,6 +52,7 @@ enum Help {
             .text("Without Full Disk Access, macOS hides some folders (Mail, Messages, Safari and other apps' data), and their space shows as unreadable. Turn it on in Settings › Access for a complete picture. DiskLens only reads sizes; it never uploads anything."),
             .tip("The menu bar icon shows how much space is free on your startup disk at a glance."),
             .tip("While ToolHUD is running, DiskLens's free space and actions move into ToolHUD's menu bar menu as a submenu, and the icon here steps aside until ToolHUD quits. To keep the icon, turn off \"Put in ToolHUD's menu while ToolHUD is running\" in Settings."),
+            .tip("Quitting asks first, since a scan in progress stops and the Trash list is forgotten. Turn off \"Ask before quitting\" in Settings › General, or tick \"Don't ask again\" when it asks."),
         ]),
 
         HelpTopic(id: "views", title: "Treemap and Sunburst", symbol: "square.grid.3x3.fill", blocks: [
@@ -96,7 +97,7 @@ enum Help {
         ]),
 
         HelpTopic(id: "settings", title: "Settings", symbol: "gearshape", blocks: [
-            .text("Settings chooses the appearance, whether DiskLens shows in the Dock and the menu bar, Full Disk Access, syncing settings with your other Macs, and how updates are handled. With both the Dock and menu bar icons off, open DiskLens again from Finder or Spotlight to reach Settings."),
+            .text("Settings chooses the appearance, asking before quitting, whether DiskLens shows in the Dock and the menu bar, Full Disk Access, syncing settings with your other Macs, and how updates are handled. With both the Dock and menu bar icons off, open DiskLens again from Finder or Spotlight to reach Settings."),
         ]),
 
         HelpTopic(id: "automation", title: "Automation", symbol: "gearshape.2", blocks: [

@@ -41,13 +41,14 @@ final class SettingsSync: ObservableObject {
         "visualizationStyle",
         "visualizationFraction",
         "leastUsedMinimumMB", UpdatePolicy.key, UpdateInterval.valueKey, UpdateInterval.unitKey,
+        QuitConfirmation.key,
     ]
 
     /// What each setting is when this Mac has never changed it, for settings without a
     /// registered default. Uploading these too means a Mac adopting the file never mistakes
     /// "at its default" for "missing".
     private static let fallbacks: [String: Any] = [
-        "showInDock": true, "showInMenuBar": false, MenuHub.foldKey: true, AppAppearance.key: AppAppearance.system.rawValue, "colorScheme": "type", "visualizationStyle": "treemap", "visualizationFraction": 0.55, "leastUsedMinimumMB": 10
+        "showInDock": true, "showInMenuBar": false, MenuHub.foldKey: true, AppAppearance.key: AppAppearance.system.rawValue, "colorScheme": "type", "visualizationStyle": "treemap", "visualizationFraction": 0.55, "leastUsedMinimumMB": 10, QuitConfirmation.key: true
     ]
 
     private var localModified: Date? {
