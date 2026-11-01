@@ -8,6 +8,8 @@ sized by the space it takes, and labels each item by how safe it is to delete. F
 needs can't be selected for deletion at all. Everything DiskLens deletes goes to the Trash,
 so you can put it back.
 
+<p align="center"><img src="docs/images/disklens-treemap.jpg" width="800" alt="DiskLens treemap of a sample home folder, each file drawn by size and colored by type, with the inspector showing an installer marked Safe to delete"></p>
+
 ---
 
 ## ⬇️ Download
@@ -69,6 +71,18 @@ Requires macOS 26 or later. Signed with Developer ID and notarized by Apple.
   `disklens://scan-home` scans your home folder.
 - **Dock, menu bar, both or neither.** Choose in Settings. The menu bar item shows free
   space with one click. Right-click the Dock icon for **Settings…**.
+
+## Screenshots
+
+<table>
+<tr>
+<td width="50%"><img src="docs/images/disklens-suggestions.jpg" alt="DiskLens Cleanup Suggestions listing app caches, logs, Xcode build data, simulator devices and installers with the space each could free"><br><sub><b>Cleanup Suggestions.</b> The usual space users, each with the space it could free.</sub></td>
+<td width="50%"><img src="docs/images/disklens-duplicates.jpg" alt="DiskLens Duplicates view listing two sets of identical sample files with their locations and how much space could be freed"><br><sub><b>Duplicates.</b> Identical files found by content, not just by name.</sub></td>
+</tr>
+<tr>
+<td width="50%"><img src="docs/images/disklens-sunburst.jpg" alt="DiskLens sunburst chart of a sample home folder, with folders as rings and files colored by type"><br><sub><b>Sunburst.</b> The same folder as rings, by folder depth.</sub></td>
+</tr>
+</table>
 
 ## Updates
 
