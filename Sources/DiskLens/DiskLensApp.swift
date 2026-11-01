@@ -177,6 +177,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             DebugQuitTest.run(how)
             return
         }
+        // The update prompt, What's New and Settings drawn to PNGs; also starts nothing else.
+        if let folder = ProcessInfo.processInfo.environment["DISKLENS_DEBUG_UPDATE_NOTES"] {
+            DebugUpdateNotes.run(folder: folder)
+            return
+        }
         #endif
         if Self.newInstall { SettingsSync.shared.adoptOnNewInstall() }
         SettingsSync.shared.start()

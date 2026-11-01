@@ -1,4 +1,5 @@
 import AppKit
+import SwiftUI
 
 /// Downloads and installs the latest release from GitHub, then restarts.
 ///
@@ -13,7 +14,7 @@ import AppKit
 ///
 /// A failure at any step aborts the update and leaves the installed app untouched.
 enum UpdateController {
-    private static let repository = "smanke-org/DiskLens"
+    static let repository = "smanke-org/DiskLens"
 
     enum UpdateOutcome {
         case upToDate(current: String)
@@ -54,11 +55,12 @@ enum UpdateController {
                     return
                 }
 
-                let choice = confirmInstall(
-                    newVersion: release.version,
-                    current: current,
-                    allowSkip: UpdateAvailability.shared.pending == release.version
-                )
+                // The latest few releases, with the ones newer than this copy marked New.
+                var notes = await ReleaseNotes.fetch(newAfter: current, through: release.version)
+                if notes.isEmpty, !release.notes.isEmpty {
+                    notes = [ReleaseNotes.Entry(version: release.version, notes: release.notes, isNew: true)]
+                }
+                let choice = confirmInstall(newVersion: release.version, current: current, notes: notes)
                 switch choice {
                 case .cancel:
                     return
@@ -67,7 +69,8 @@ enum UpdateController {
                     UpdateAvailability.shared.pending = nil
                     return
                 case .install:
-                    break
+                    // Seen here, so Settings needn't show them again after the restart.
+                    UserDefaults.standard.set(release.version, forKey: WhatsNew.shownInPromptKey)
                 }
 
                 let stagedApp = try await downloadAndStage(release)
@@ -90,6 +93,8 @@ enum UpdateController {
     struct Release {
         let version: String
         let downloadURL: URL
+        /// What the release says changed (its notes on GitHub).
+        var notes = ""
     }
 
     /// The latest release, or nil if none is published, for the background checker.
@@ -127,7 +132,8 @@ enum UpdateController {
             throw fail("The latest release has no disk image to download.")
         }
 
-        return Release(version: tag.hasPrefix("v") ? String(tag.dropFirst()) : tag, downloadURL: url)
+        return Release(version: tag.hasPrefix("v") ? String(tag.dropFirst()) : tag, downloadURL: url,
+                       notes: (json["body"] as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines))
     }
 
     /// Numeric component comparison, so 1.1.10 is correctly newer than 1.1.9.
@@ -337,7 +343,7 @@ enum UpdateController {
     }
 
     @MainActor
-    private static func confirmInstall(newVersion: String, current: String, allowSkip: Bool) -> ConfirmChoice {
+    private static func confirmInstall(newVersion: String, current: String, notes: [ReleaseNotes.Entry]) -> ConfirmChoice {
         // An accessory app has no Dock presence, and a modal it puts up cannot reliably
         // take focus — runModal() then returns its default button without ever showing
         // anything. Becoming a regular app for the duration gives the alert something to
@@ -353,13 +359,40 @@ enum UpdateController {
             DispatchQueue.main.async { NSApp.setActivationPolicy(previousPolicy) }
         }
 
+        let alert = makeConfirmAlert(newVersion: newVersion, current: current, notes: notes)
+        let install = alert.buttons[1]
+        let consent = InstallConsent(button: install, window: alert.window)
+        defer { consent.finish() }
+        bringForward(alert)
+
+        let response = alert.runModal()
+        NSLog("DiskLens: update prompt response=\(response.rawValue) installPressed=\(consent.pressed)")
+        if consent.pressed { return .install }
+        return alert.suppressionButton?.state == .on ? .skip : .cancel
+    }
+
+    /// The update prompt, with what's new and the reminder checkbox, not yet shown.
+    @MainActor
+    static func makeConfirmAlert(newVersion: String, current: String, notes: [ReleaseNotes.Entry]) -> NSAlert {
         let alert = NSAlert()
         alert.messageText = "Update to version \(newVersion)?"
         alert.informativeText = """
-        You have \(current). The update will be downloaded, checked, and installed automatically.
-
-        DiskLens will quit and reopen to finish.
+        You have \(current). The update will be downloaded, checked, and installed automatically. DiskLens will quit and reopen to finish.
         """
+        if !notes.isEmpty {
+            let list = NSHostingView(rootView: VStack(alignment: .leading, spacing: 6) {
+                Text("What's new").font(.headline)
+                ReleaseNotesList(entries: notes)
+            })
+            list.frame = CGRect(x: 0, y: 0, width: 420, height: 300)
+            alert.accessoryView = list
+        }
+        // Ticked (the default), "Not Now" stops the reminders for this version: no
+        // notification, and the menu goes back to "Check for Updates…". Checking by hand
+        // still offers it.
+        alert.showsSuppressionButton = true
+        alert.suppressionButton?.title = "Don't remind me about this version"
+        alert.suppressionButton?.state = .on
         // Installing takes a deliberate press of "Update and Restart", never a stray key.
         //
         // This app takes keyboard focus when the dialog opens, so a Return the user meant
@@ -369,17 +402,8 @@ enum UpdateController {
         // no key equivalent, and InstallConsent keeps it disabled until the dialog has been
         // on screen and in front for a moment, and records the press itself.
         alert.addButton(withTitle: "Not Now")
-        let install = alert.addButton(withTitle: "Update and Restart")
-        install.keyEquivalent = ""
-        if allowSkip { alert.addButton(withTitle: "Skip This Version") }
-        let consent = InstallConsent(button: install, window: alert.window)
-        defer { consent.finish() }
-        bringForward(alert)
-
-        let response = alert.runModal()
-        NSLog("DiskLens: update prompt response=\(response.rawValue) installPressed=\(consent.pressed)")
-        if consent.pressed { return .install }
-        return response == .alertThirdButtonReturn && allowSkip ? .skip : .cancel
+        alert.addButton(withTitle: "Update and Restart").keyEquivalent = ""
+        return alert
     }
 
     /// Makes the app active with the alert in front, before `runModal()`.

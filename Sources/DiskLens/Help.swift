@@ -98,6 +98,14 @@ enum Help {
 
         HelpTopic(id: "settings", title: "Settings", symbol: "gearshape", blocks: [
             .text("Settings chooses the appearance, asking before quitting, whether DiskLens shows in the Dock and the menu bar, Full Disk Access, syncing settings with your other Macs, and how updates are handled. With both the Dock and menu bar icons off, open DiskLens again from Finder or Spotlight to reach Settings."),
+            .tip("Settings can be dragged bigger to see more at once, and keeps the size you choose."),
+        ]),
+
+        HelpTopic(id: "updates", title: "Updates", symbol: "arrow.down.circle", blocks: [
+            .text("Settings › Updates chooses what DiskLens does when a new version is out: install it automatically when your Mac is idle and no scan is running, ask you first, or not check at all. Check Now looks right away."),
+            .heading("What's new"),
+            .text("The update window shows the notes for the latest releases, with the ones you don't have yet marked New. \"Don't remind me about this version\" is ticked to begin with: click Not Now with it ticked, and DiskLens stops reminding you about that version (Check Now still offers it). Untick it to be reminded again."),
+            .text("After an update that installed itself, Settings shows what changed the next time it opens. Tick \"Don't show this again\" to put it away. What's New… beside Check Now shows the notes any time."),
         ]),
 
         HelpTopic(id: "automation", title: "Automation", symbol: "gearshape.2", blocks: [

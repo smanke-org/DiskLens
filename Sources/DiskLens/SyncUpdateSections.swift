@@ -40,7 +40,10 @@ struct SyncUpdateSections: View {
                 }
             }
             LabeledContent("Version \(AppInfo.displayVersion)") {
-                Button("Check Now") { UpdateController.checkForUpdates() }
+                HStack {
+                    Button("What's New…") { SettingsWindow.shared.showWhatsNew() }
+                    Button("Check Now") { UpdateController.checkForUpdates() }
+                }
             }
             if let error = updater.lastError {
                 Text(error).font(.callout).foregroundStyle(.red)

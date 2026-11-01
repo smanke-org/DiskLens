@@ -65,6 +65,9 @@ final class AutoUpdater: NSObject, ObservableObject, UNUserNotificationCenterDel
             UNNotificationCategory(identifier: Self.category, actions: [install], intentIdentifiers: []),
         ])
         if policy != .off { requestNotificationPermission() }
+        // Before the automatic-update record is read; a brand-new install shows no notes.
+        WhatsNew.shared.noteLaunch(newInstall: AppDelegate.newInstall,
+                                   autoInstalledFrom: UserDefaults.standard.string(forKey: Self.installedFromKey))
         announceIfJustUpdated()
 
         // A few seconds after launch, so startup isn't waiting on the network.
@@ -247,7 +250,7 @@ final class AutoUpdater: NSObject, ObservableObject, UNUserNotificationCenterDel
         UserDefaults.standard.removeObject(forKey: Self.installedFromKey)
         guard from != AppInfo.version else { return }
         notify(id: "updated-\(AppInfo.version)", title: "DiskLens updated to \(AppInfo.version)",
-               body: "It installed itself while your Mac wasn't in use.", installable: false)
+               body: "It installed itself while your Mac wasn't in use. Click to see what's new.", installable: false)
     }
 
     private func notifyAvailable(_ version: String) {
@@ -277,10 +280,15 @@ final class AutoUpdater: NSObject, ObservableObject, UNUserNotificationCenterDel
     nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse,
                                             withCompletionHandler completionHandler: @escaping () -> Void) {
         let installable = response.notification.request.content.categoryIdentifier == Self.category
+        let updated = response.notification.request.identifier.hasPrefix("updated-")
         DispatchQueue.main.async {
-            // Clicking the banner or its Install button opens the usual confirmation,
-            // so the user still sees what they're agreeing to.
-            if installable { UpdateController.checkForUpdates() }
+            MainActor.assumeIsolated {
+                // Clicking the banner or its Install button opens the usual confirmation,
+                // so the user still sees what they're agreeing to.
+                if installable { UpdateController.checkForUpdates() }
+                // "Updated": Settings, which shows what changed.
+                if updated { SettingsWindow.shared.show() }
+            }
         }
         completionHandler()
     }
