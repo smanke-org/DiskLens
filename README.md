@@ -71,6 +71,9 @@ Requires macOS 26 or later. Signed with Developer ID and notarized by Apple.
   `disklens://scan-home` scans your home folder.
 - **Dock, menu bar, both or neither.** Choose in Settings. The menu bar item shows free
   space with one click. Right-click the Dock icon for **Settings…**.
+- **Release notes in updates.** The update window shows what's new in the latest releases,
+  marking the ones you don't have yet, and *What's New…* in Settings shows them any time.
+- **Resizable Settings.** Drag Settings bigger to see more at once; it keeps the size you choose.
 
 ## Screenshots
 
