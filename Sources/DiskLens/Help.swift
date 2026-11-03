@@ -114,6 +114,16 @@ enum Help {
                 ("disklens://scan-home", "Scan your home folder"),
             ]),
             .text("Use these links from Shortcuts, scripts or a launcher. ToolHUD's DiskLens buttons use them."),
+            .heading("Command line and AI agents"),
+            .text("DiskLens is also a command line tool, so scripts and AI agents such as Claude Code or Codex can scan a folder, list the biggest items and the cleanup suggestions with their safety labels, and fill the Trash list. Commands run in the open app, and the window shows each change at once. Moving items to the Trash needs --yes, protected items are always refused, and items labeled Use caution also need --caution-ok. Nothing is deleted outright: it all goes to the Finder Trash."),
+            .keys([
+                ("disklens help", "List every command and its options"),
+                ("disklens scan start ~/Downloads", "Scan a folder, as choosing it in the sidebar does"),
+                ("disklens items largest --limit 20", "The largest files in the scan"),
+                ("disklens suggestions list", "Cleanup Suggestions and the space each could free"),
+                ("disklens mcp", "Offer the same commands to MCP apps, such as Claude Desktop"),
+            ]),
+            .text("To type disklens in Terminal, link it once: ln -s /Applications/DiskLens.app/Contents/MacOS/DiskLens ~/.local/bin/disklens (with ~/.local/bin on your PATH). MCP apps take the full path to that program, followed by mcp."),
         ]),
 
         HelpTopic(id: "troubleshooting", title: "Troubleshooting", symbol: "wrench.and.screwdriver", blocks: [

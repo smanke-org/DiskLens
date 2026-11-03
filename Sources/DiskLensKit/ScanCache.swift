@@ -5,7 +5,16 @@ import Synchronization
 /// the folders FSEvents says changed. One LZFSE-compressed file per scanned folder in
 /// ~/Library/Caches/com.smanke.DiskLens.
 public final class ScanCache: @unchecked Sendable {
-    public static let shared = ScanCache()
+    public static let shared: ScanCache = {
+        #if DEBUG
+        // A Debug test copy of the agent CLI (APP_STORE=<folder>) keeps its scans in that
+        // folder, never beside the installed app's. Release builds ignore it.
+        if let store = ProcessInfo.processInfo.environment["APP_STORE"], !store.isEmpty {
+            return ScanCache(directory: URL(fileURLWithPath: store).appendingPathComponent("Scans", isDirectory: true))
+        }
+        #endif
+        return ScanCache()
+    }()
 
     private static let magic: UInt32 = 0x444C_4331 // "DLC1"
     private let directory: URL

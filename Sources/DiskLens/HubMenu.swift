@@ -41,8 +41,10 @@ final class HubMenu: NSObject {
         return menu
     }
 
+    @objc private func openMain() { Self.openMainWindow() }
+
     /// Opening the app again brings the main window back, as the panel's button does.
-    @objc private func openMain() {
+    static func openMainWindow() {
         let configuration = NSWorkspace.OpenConfiguration()
         configuration.activates = true
         NSWorkspace.shared.openApplication(at: Bundle.main.bundleURL, configuration: configuration)

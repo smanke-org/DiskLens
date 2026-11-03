@@ -1,7 +1,17 @@
 import DiskLensKit
 import SwiftUI
 
+/// `disklens <command>` (the app binary under a short name) runs the command against the
+/// running app and exits, without starting a second copy. See Agent/AgentCLI.swift.
 @main
+enum Launcher {
+    @MainActor
+    static func main() {
+        if let code = AgentCLI.runIfRequested() { exit(code) }
+        DiskLensApp.main()
+    }
+}
+
 struct DiskLensApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @State private var model = AppModel()
@@ -13,6 +23,8 @@ struct DiskLensApp: App {
         AppDelegate.newInstall = SettingsSync.domainIsEmpty()
         SettingsWindow.shared.makeContent = { AnyView(SettingsView()) }
         let model = self.model
+        // `disklens` and the MCP server run their commands on this model.
+        AgentCommands.model = model
         // An automatic update must not restart DiskLens in the middle of its work.
         AutoUpdater.shared.appBusyReason = {
             if model.isScanning { return "a scan is running" }
@@ -41,6 +53,9 @@ struct DiskLensApp: App {
                 .frame(minWidth: 900, minHeight: 600)
         }
         .defaultSize(width: 1280, height: 820)
+        // A Debug test copy of the agent CLI (APP_STORE) opens no window unless asked
+        // (`disklens window open`), so it never scans the home folder on its own.
+        .defaultLaunchBehavior(AgentSocket.isTestRun ? .suppressed : .automatic)
         .commands {
             CommandGroup(after: .appInfo) {
                 // Right below About: the developer's site, which lists every app.
@@ -70,7 +85,7 @@ struct DiskLensApp: App {
 
         // ToolHUD can take the item into its own menu while it runs; that never changes the
         // setting, so the icon comes back when ToolHUD quits.
-        MenuBarExtra(isInserted: Binding(get: { presence.showInMenuBar && !hub.isHosted },
+        MenuBarExtra(isInserted: Binding(get: { presence.showInMenuBar && !hub.isHosted && !AgentSocket.isTestRun },
                                          set: { if !hub.isHosted { presence.showInMenuBar = $0 } })) {
             MenuBarPanel()
         } label: {
@@ -164,6 +179,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     static var onURL: ((URL) -> Void)?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        #if DEBUG
+        // A test run of the agent CLI (APP_STORE): its own saved scans and settings, and the
+        // agent socket. Nothing else starts: no sync, updater, ToolHUD menu or menu bar item.
+        if AgentSocket.isTestRun {
+            NSApp.setActivationPolicy(.accessory)
+            AgentSocket.listen { await AgentRouter.handle($0) }
+            return
+        }
+        #endif
         AppAppearance.start()
         if !AppPresence.showInDock { AppPresence.applyDock() }
         #if DEBUG
@@ -182,6 +206,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             DebugUpdateNotes.run(folder: folder)
             return
         }
+        #endif
+        #if !DEBUG
+        // `disklens` and the MCP server talk to the app through this. A Debug build listens
+        // only as a test copy (above): on this path it would take the installed app's socket.
+        AgentSocket.listen { await AgentRouter.handle($0) }
         #endif
         if Self.newInstall { SettingsSync.shared.adoptOnNewInstall() }
         SettingsSync.shared.start()

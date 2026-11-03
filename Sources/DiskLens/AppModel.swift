@@ -74,10 +74,10 @@ final class AppModel {
     var filter = FileFilter()
 
     var style: VisualizationStyle {
-        didSet { UserDefaults.standard.set(style.rawValue, forKey: "visualizationStyle") }
+        didSet { Self.defaults.set(style.rawValue, forKey: "visualizationStyle") }
     }
     var colors: ColorScheme {
-        didSet { UserDefaults.standard.set(colors.rawValue, forKey: "colorScheme") }
+        didSet { Self.defaults.set(colors.rawValue, forKey: "colorScheme") }
     }
 
     /// Items waiting to be moved to the Trash, in the order added.
@@ -92,21 +92,31 @@ final class AppModel {
 
     private var progressTimer: Timer?
 
+    /// Where the sidebar's folders, the chosen folder and the chart style are kept. A Debug
+    /// test copy of the agent CLI (`APP_STORE`) keeps them in a domain of its own, so it never
+    /// changes what the installed app shows.
+    static let defaults: UserDefaults = {
+        #if DEBUG
+        if AgentSocket.isTestRun, let suite = UserDefaults(suiteName: "com.smanke.DiskLens.agenttest") { return suite }
+        #endif
+        return .standard
+    }()
+
     init() {
-        let saved = UserDefaults.standard.stringArray(forKey: "scanTargets") ?? []
+        let saved = Self.defaults.stringArray(forKey: "scanTargets") ?? []
         let initialTargets = [ScanTarget(path: NSHomeDirectory())]
             + saved.filter { $0 != NSHomeDirectory() }.map { ScanTarget(path: $0) }
         targets = initialTargets
-        let last = UserDefaults.standard.string(forKey: "selectedTarget") ?? ""
+        let last = Self.defaults.string(forKey: "selectedTarget") ?? ""
         selectedTarget = initialTargets.contains { $0.id == last } ? last : NSHomeDirectory()
-        style = VisualizationStyle(rawValue: UserDefaults.standard.string(forKey: "visualizationStyle") ?? "") ?? .treemap
-        colors = ColorScheme(rawValue: UserDefaults.standard.string(forKey: "colorScheme") ?? "") ?? .type
+        style = VisualizationStyle(rawValue: Self.defaults.string(forKey: "visualizationStyle") ?? "") ?? .treemap
+        colors = ColorScheme(rawValue: Self.defaults.string(forKey: "colorScheme") ?? "") ?? .type
     }
 
     /// Picks up the chart style and colors after another Mac's settings were adopted.
     func reloadSyncedSettings() {
-        style = VisualizationStyle(rawValue: UserDefaults.standard.string(forKey: "visualizationStyle") ?? "") ?? .treemap
-        colors = ColorScheme(rawValue: UserDefaults.standard.string(forKey: "colorScheme") ?? "") ?? .type
+        style = VisualizationStyle(rawValue: Self.defaults.string(forKey: "visualizationStyle") ?? "") ?? .treemap
+        colors = ColorScheme(rawValue: Self.defaults.string(forKey: "colorScheme") ?? "") ?? .type
     }
 
     var isScanning: Bool {
@@ -128,7 +138,12 @@ final class AppModel {
         panel.prompt = "Scan"
         panel.message = "Choose a folder or drive to scan."
         guard panel.runModal() == .OK, let url = panel.url else { return }
-        let target = ScanTarget(path: url.path)
+        addTarget(path: url.path)
+    }
+
+    /// Adds a folder to the sidebar (once) and selects it, which scans it or loads its saved scan.
+    func addTarget(path: String) {
+        let target = ScanTarget(path: path)
         if !targets.contains(target) {
             targets.append(target)
             saveTargets()
@@ -144,14 +159,14 @@ final class AppModel {
     }
 
     private func saveTargets() {
-        UserDefaults.standard.set(targets.filter { !$0.isHome }.map(\.path), forKey: "scanTargets")
+        Self.defaults.set(targets.filter { !$0.isHome }.map(\.path), forKey: "scanTargets")
     }
 
     func select(_ id: ScanTarget.ID) {
         guard id != selectedTarget || tree == nil else { return }
         cancelScan()
         selectedTarget = id
-        UserDefaults.standard.set(id, forKey: "selectedTarget")
+        Self.defaults.set(id, forKey: "selectedTarget")
         tree = nil
         treeVersion += 1
         phase = .loading
@@ -339,28 +354,39 @@ final class AppModel {
     }
 
     private func trashBasket() {
-        guard let tree else { return }
         let ids = basket
+        Task {
+            let (done, error) = await moveToTrash(ids)
+            if let error, done.count < ids.count {
+                let alert = NSAlert(error: error)
+                alert.messageText = "Some items couldn't be moved to the Trash."
+                alert.runModal()
+            }
+        }
+    }
+
+    /// Moves items to the Finder Trash (never deletes them), then takes the ones that went off
+    /// the tree, the Trash list and the lists. Returns the items moved, and the error for the rest.
+    func moveToTrash(_ ids: [NodeID]) async -> (trashed: [NodeID], error: (any Error)?) {
+        guard let tree, !ids.isEmpty else { return ([], nil) }
         let urls = ids.map { tree.url($0) }
-        NSWorkspace.shared.recycle(urls) { [weak self] trashed, error in
-            MainActor.assumeIsolated {
-                guard let self, let current = self.tree, current === tree else { return }
-                let trashedPaths = Set(trashed.keys.map(\.path))
-                let done = ids.filter { trashedPaths.contains(tree.url($0).path) }
-                let before = current.size(FileTree.root)
-                let updated = current.removing(done)
-                self.trashedThisSession += before - updated.size(FileTree.root)
-                self.tree = updated
-                self.treeVersion += 1
-                self.basket.removeAll { done.contains($0) }
-                if let selection = self.selection, updated.isRemoved(selection) { self.selection = nil }
-                self.suggestions.refresh(updated)
-                self.duplicates.removeTrashed(updated)
-                ScanCache.shared.save(updated)
-                if let error, done.count < ids.count {
-                    let alert = NSAlert(error: error)
-                    alert.messageText = "Some items couldn't be moved to the Trash."
-                    alert.runModal()
+        return await withCheckedContinuation { continuation in
+            NSWorkspace.shared.recycle(urls) { [weak self] trashed, error in
+                MainActor.assumeIsolated {
+                    let trashedPaths = Set(trashed.keys.map(\.path))
+                    let done = ids.filter { trashedPaths.contains(tree.url($0).path) }
+                    defer { continuation.resume(returning: (done, error)) }
+                    guard let self, let current = self.tree, current === tree else { return }
+                    let before = current.size(FileTree.root)
+                    let updated = current.removing(done)
+                    self.trashedThisSession += before - updated.size(FileTree.root)
+                    self.tree = updated
+                    self.treeVersion += 1
+                    self.basket.removeAll { done.contains($0) }
+                    if let selection = self.selection, updated.isRemoved(selection) { self.selection = nil }
+                    self.suggestions.refresh(updated)
+                    self.duplicates.removeTrashed(updated)
+                    ScanCache.shared.save(updated)
                 }
             }
         }

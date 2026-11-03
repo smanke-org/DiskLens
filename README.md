@@ -87,6 +87,34 @@ Requires macOS 26 or later. Signed with Developer ID and notarized by Apple.
 </tr>
 </table>
 
+## Command line and AI agents
+
+DiskLens is also a command line tool, so scripts and AI agents (Claude Code, Codex) can scan a folder, list the
+biggest items and the cleanup suggestions with their safety labels, and move items to the Trash. Commands run in
+the open app, and the window shows each change at once. Link it once to type `disklens`:
+
+```bash
+ln -s /Applications/DiskLens.app/Contents/MacOS/DiskLens ~/.local/bin/disklens
+```
+
+```bash
+disklens help
+disklens scan start ~/Downloads && disklens scan status --wait 25
+disklens items largest --min-mb 100 --json
+disklens suggestions list
+disklens trash move ~/Downloads/Installer.dmg        # shows what it would move
+disklens trash move ~/Downloads/Installer.dmg --yes  # moves it to the Trash
+```
+
+Every command takes `--json`. Moving to the Trash only shows what it would move until you add `--yes`; protected
+items are always refused, items labeled *Use caution* also need `--caution-ok`, and nothing is deleted outright.
+For MCP apps such as Claude Desktop, the same commands are served by
+`/Applications/DiskLens.app/Contents/MacOS/DiskLens mcp`:
+
+```bash
+claude mcp add --scope user disklens -- /Applications/DiskLens.app/Contents/MacOS/DiskLens mcp
+```
+
 ## Updates
 
 DiskLens checks GitHub for a new release once a day, or as often as you choose in Settings (a number of hours, days, weeks or months). In Settings
