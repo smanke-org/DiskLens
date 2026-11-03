@@ -202,6 +202,8 @@ struct HubItem: Codable, Sendable {
     var indentation: Int
     var toolTip: String?
     var image: HubImage?
+    /// The image goes in the title (`showIcon`), as menus on macOS 27 draw no item images.
+    var imageInTitle: Bool?
     var children: [HubItem]?
 
     @MainActor
@@ -213,11 +215,12 @@ struct HubItem: Codable, Sendable {
             guard item.view == nil || picture != nil || !item.title.isEmpty else { return nil }
             let path = path.isEmpty ? "\(index)" : "\(path).\(index)"
             item.submenu?.update()
-            return HubItem(title: picture == nil ? item.title : "", path: path, isSeparator: item.isSeparatorItem, isEnabled: item.isEnabled,
+            let icon = item.titleIcon
+            return HubItem(title: picture == nil ? item.plainTitle : "", path: path, isSeparator: item.isSeparatorItem, isEnabled: item.isEnabled,
                            state: item.state.rawValue, key: item.keyEquivalent,
                            modifiers: item.keyEquivalentModifierMask.rawValue, isAlternate: item.isAlternate,
                            indentation: item.indentationLevel, toolTip: item.toolTip,
-                           image: picture ?? item.image.flatMap(HubImage.init),
+                           image: picture ?? (icon ?? item.image).flatMap(HubImage.init), imageInTitle: icon == nil ? nil : true,
                            children: item.submenu.map { items(of: $0, path: path) })
         }
     }

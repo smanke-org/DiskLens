@@ -47,7 +47,7 @@ enum DebugHelpTest {
                 trace("topics=\(Help.topics.count) unresolved=\(unresolved) tokens=\(Help.debugTokens)")
                 let menu = NSMenu()
                 delegate?.menuNeedsUpdate?(menu)
-                trace("menu: \(menu.items.map(\.title).filter { !$0.isEmpty })")
+                trace("menu: \(menu.items.map(\.plainTitle).filter { !$0.isEmpty })")
                 trace("help menu: \(NSApp.helpMenu?.items.map { $0.title + " " + $0.keyEquivalent } ?? [])")
                 HelpWindow.shared.show(topic: ProcessInfo.processInfo.environment["DISKLENS_DEBUG_HELP_TOPIC"] ?? "getting-started")
                 RunLoop.main.run(until: Date().addingTimeInterval(1))
