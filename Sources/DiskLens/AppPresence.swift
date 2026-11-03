@@ -71,8 +71,8 @@ enum AppPresence {
         let appItem = NSMenuItem()
         main.addItem(appItem)
         let appMenu = NSMenu()
-        appMenu.addItem(withTitle: "About \(appName)",
-                        action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)), keyEquivalent: "")
+        appMenu.addItem(withTitle: "About \(appName)", action: #selector(AboutMenuTarget.showAbout(_:)),
+                        keyEquivalent: "").target = AboutMenuTarget.shared
         appMenu.addItem(.separator())
         let prefs = NSMenuItem(title: settingsTitle, action: settings, keyEquivalent: ",")
         prefs.target = target

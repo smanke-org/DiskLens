@@ -3,6 +3,12 @@ import Foundation
 /// Version details read from the bundle, so the number shown in the menu and in
 /// Settings always matches what was actually built rather than a hardcoded copy.
 enum AppInfo {
+    /// The About window: the version and the last 10 releases' notes.
+    @MainActor
+    static func showAbout() {
+        AboutWindow.shared.show()
+    }
+
     static let name = "DiskLens"
 
     static var version: String {

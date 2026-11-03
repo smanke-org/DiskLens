@@ -138,7 +138,7 @@ struct MenuBarPanel: View {
             }
             Button("DiskLens Help") { HelpWindow.shared.show() }
             Button("Settings…") { SettingsWindow.shared.show() }
-            Button("About DiskLens") { NSApp.activate(ignoringOtherApps: true); NSApp.orderFrontStandardAboutPanel(nil) }
+            Button("About DiskLens") { NSApp.activate(ignoringOtherApps: true); AppInfo.showAbout() }
             Button("Our other apps…") { if let url = URL(string: "https://stevemanke.com/") { NSWorkspace.shared.open(url) } }
             Button("Quit DiskLens") { NSApp.terminate(nil) }
         }

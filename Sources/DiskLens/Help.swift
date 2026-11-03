@@ -105,7 +105,7 @@ enum Help {
             .text("Settings › Updates chooses what DiskLens does when a new version is out: install it automatically when your Mac is idle and no scan is running, ask you first, or not check at all. Check Now looks right away."),
             .heading("What's new"),
             .text("The update window shows the notes for the latest releases, with the ones you don't have yet marked New. \"Don't remind me about this version\" is ticked to begin with: click Not Now with it ticked, and DiskLens stops reminding you about that version (Check Now still offers it). Untick it to be reminded again."),
-            .text("After an update that installed itself, Settings shows what changed the next time it opens. Tick \"Don't show this again\" to put it away. What's New… beside Check Now shows the notes any time."),
+            .text("After an update that installed itself, Settings shows what changed the next time it opens. Tick \"Don't show this again\" to put it away. What's New… beside Check Now shows the notes any time, and About DiskLens shows the last 10 releases."),
         ]),
 
         HelpTopic(id: "automation", title: "Automation", symbol: "gearshape.2", blocks: [
